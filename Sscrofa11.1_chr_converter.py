@@ -33,23 +33,48 @@ def open_file(infile):
     return fr
 
 
-def convert_chr_name(infile, outfile):
-    fw = open(outfile, 'w')
-    fr = open_file(infile)
+def is_fa(file_name):
+    fasta_list = ['fna', 'fna.gz', 'fa', 'fa.gz', 'fasta', 'fasta.gz']
 
-    for line in fr:
-        if line.startswith('#'):
-            fw.write(line)
-            continue
+    for element in fasta_list:
+        if file_name.endswith(element):
+            return True
 
-        line = line.rstrip()
-        cols = line.split('\t')
-        chr_col = cols[0]
 
-        if chr_col in chr_dic:
-            fw.write('{}\t{}\n'.format(chr_dic[chr_col], '\t'.join(cols[1:])))
-        else:
-            fw.write('{}\n'.format(line))
+class Convert:
+    def __init__(self, infile, outfile):
+        self.fw = open(outfile, 'w')
+        self.fr = open_file(infile)
+
+    def chr_in_gff(self):
+
+        for line in self.fr:
+            if line.startswith('#'):
+                self.fw.write(line)
+                continue
+
+            line = line.rstrip()
+            cols = line.split('\t')
+            chr_col = cols[0]
+
+            if chr_col in chr_dic:
+                self.fw.write('{}\t{}\n'.format(chr_dic[chr_col], '\t'.join(cols[1:])))
+            else:
+                self.fw.write('{}\n'.format(line))
+
+    def chr_in_fasta(self):
+        for line in self.fr:
+            if line.startswith('>'):
+                chr_start = 1
+                chr_end = line.find(' ')
+                chromosome = line[chr_start: chr_end]
+
+                if chromosome in chr_dic:
+                    line = line.replace(chromosome, chr_dic[chromosome])
+
+                self.fw.write(line)
+            else:
+                self.fw.write('{}'.format(line))
 
 
 def main():
@@ -62,7 +87,12 @@ def main():
     infile = sys.argv[1]
     outfile = sys.argv[2]
 
-    convert_chr_name(infile, outfile)
+    convert = Convert(infile, outfile)
+    if infile.endswith('gff.gz') or infile.endswith('gff') or infile.endswith('gtf') or infile.endswith('gtf.gz'):
+        convert.chr_in_gff()
+
+    elif is_fa(infile):
+        convert.chr_in_fasta()
 
 
 if __name__ == "__main__":
